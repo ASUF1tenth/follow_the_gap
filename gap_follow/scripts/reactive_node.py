@@ -30,6 +30,7 @@ class ReactiveFollowGap(Node):
             1.Setting each value to the mean over some window
             2.Rejecting high values (eg. > 3m)
         """
+        
         # Convert to numpy array for easier processing
         proc_ranges = np.array(ranges)
         # Extract front 180° FOV: combine front-right (270-360°) and front-left (0-90°)
