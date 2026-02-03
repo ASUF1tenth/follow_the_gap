@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+
 import numpy as np
 from sensor_msgs.msg import LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
@@ -14,8 +15,8 @@ class ReactiveFollowGap(Node):
         # Topics & Subs, Pubs
         lidarscan_topic = '/scan'
         drive_topic = '/drive'
-       
-        # Subscribe to LIDAR 
+
+        # TODO: Subscribe to LIDAR
         self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
         # TODO: Publish to drive
 
