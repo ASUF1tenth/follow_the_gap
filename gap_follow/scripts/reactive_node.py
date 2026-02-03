@@ -15,7 +15,7 @@ class ReactiveFollowGap(Node):
         # Topics & Subs, Pubs
         lidarscan_topic = '/scan'
         drive_topic = '/drive'
-
+        
         # TODO: Subscribe to LIDAR
         self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
         # TODO: Publish to drive
@@ -25,9 +25,11 @@ class ReactiveFollowGap(Node):
             1.Setting each value to the mean over some window
             2.Rejecting high values (eg. > 3m)
         """
+        
         # Convert to numpy array for easier processing
         proc_ranges = np.array(ranges)
-        
+        # Extract front 180° FOV: combine front-right (270-360°) and front-left (0-90°)
+        proc_ranges = np.array(ranges[180:-180])
         # Replace inf and nan values with a large number (e.g., 10.0)
         proc_ranges[np.isinf(proc_ranges)] = 10.0
         proc_ranges[np.isnan(proc_ranges)] = 10.0
