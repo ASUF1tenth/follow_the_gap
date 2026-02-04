@@ -27,6 +27,8 @@ class ReactiveFollowGap(Node):
         self.radians_per_elem = 0.00436332312998582
         self.PREPROCESS_CONV_SIZE = 3
         self.MAX_LIDAR_DIST = 6
+        self.disparity = 1
+        self.minimum_distance = 0.2
 
 
         # TODO: Subscribe to LIDAR
@@ -75,8 +77,32 @@ class ReactiveFollowGap(Node):
         return None
 
     def safety_bubble(self,proc_ranges):
-
-        return proc_ranges
+        output_ranges = proc_ranges.copy()
+        for i in range(len(proc_ranges)):
+            # Edge case for the first element
+            if i == 0:
+                last = proc_ranges[i]
+                continue
+            if (abs(proc_ranges[i] - last)) > self.disparity:
+                 # Check if the edge is Left->Right , or Right->Left, it'll matter where we place the bubble.
+                if proc_ranges[i] < last:
+                    center_of_bubble = i
+                    distance_to_point = max(self.minimum_distance,proc_ranges[i])
+                else:
+                    center_of_bubble = i - 1
+                    distance_to_point = max(self.minimum_distance,last)
+                # Get bubble radius in terms of number of LiDAR points to zero out
+                bubble_radius = int(
+                        (self.safety_margin / distance_to_point) / self.radians_per_elem
+                    )
+                # Ensure start_idx does not go below 0
+                start_idx = max(0, center_of_bubble - bubble_radius)
+                # Ensure end_idx does not exceed the array bounds
+                end_idx = min(len(proc_ranges) - 1, center_of_bubble + bubble_radius)
+                # Zero out the points within the bubble
+                output_ranges[start_idx:end_idx + 1] = 0
+            last = proc_ranges[i]
+        return output_ranges
 
     def lidar_callback(self, data):
         """ Process each LiDAR scan as per the Follow Gap algorithm & publish an AckermannDriveStamped Message
