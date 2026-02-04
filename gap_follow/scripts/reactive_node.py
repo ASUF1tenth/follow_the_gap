@@ -1,15 +1,20 @@
 import rclpy
 from rclpy.node import Node
-
+import os
 import numpy as np
 from sensor_msgs.msg import LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
+
+
+log_path = "/sim_ws/src/f1tenth_gym_ros/readings.csv"
+
 
 class ReactiveFollowGap(Node):
     """ 
     Implement Wall Following on the car
     This is just a template, you are free to implement your own node!
     """
+
     def __init__(self):
         super().__init__('reactive_node')
         # Topics & Subs, Pubs
@@ -19,6 +24,10 @@ class ReactiveFollowGap(Node):
         self.safety_margin = 0.2 + self.car_width/2
         self.gap_distance = 2
         self.range_offset = 180
+        self.radians_per_elem = 0.00436332312998582
+        self.PREPROCESS_CONV_SIZE = 3
+        self.MAX_LIDAR_DIST = 6
+
 
         # TODO: Subscribe to LIDAR
         self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
@@ -31,23 +40,21 @@ class ReactiveFollowGap(Node):
             2.Rejecting high values (eg. > 3m)
         """
         
-        # Convert to numpy array for easier processing
-        proc_ranges = np.array(ranges)
-        # Extract front 180° FOV: combine front-right (270-360°) and front-left (0-90°)
+
+        # # Extract front 180° FOV: combine front-right (270-360°) and front-left (0-90°)
         proc_ranges = np.array(ranges[self.range_offset:-self.range_offset])
-        # Replace inf and nan values with a large number (e.g., 10.0)
-        proc_ranges[np.isinf(proc_ranges)] = 10.0
-        proc_ranges[np.isnan(proc_ranges)] = 10.0
-        
-        # Cap maximum distance at 3.0 meters
-        proc_ranges = np.clip(proc_ranges, 0, 3.0)
-        
-        # Apply moving average filter for smoothing (window size of 5)
+        # # Replace inf and nan values with a large number (e.g., 10.0)
+        proc_ranges[np.isinf(proc_ranges)] = self.MAX_LIDAR_DIST
+        proc_ranges[np.isnan(proc_ranges)] = self.MAX_LIDAR_DIST
+        # # Apply moving average filter for smoothing (window size of 5)
         window_size = 5
         kernel = np.ones(window_size) / window_size
-        proc_ranges = np.convolve(proc_ranges, kernel, mode='same')
-        
-        return proc_ranges
+        proc_ranges = np.convolve(proc_ranges, kernel, mode='valid')
+        # # Cap maximum distance
+        proc_ranges = np.clip(proc_ranges, 0, self.MAX_LIDAR_DIST)
+        # self.get_logger().info(f"Processed ranges: {proc_ranges}")
+        # Lidar Right to left, Print Left to right
+        return proc_ranges[::-1]
 
     def find_max_gap(self, free_space_ranges) -> tuple :
         """ Return the start index & end index of the max gap in free_space_ranges
@@ -67,11 +74,16 @@ class ReactiveFollowGap(Node):
 
         return None
 
+    def safety_bubble(self,proc_ranges):
+
+        return proc_ranges
+
     def lidar_callback(self, data):
         """ Process each LiDAR scan as per the Follow Gap algorithm & publish an AckermannDriveStamped Message
         """
         ranges = data.ranges
         proc_ranges = self.preprocess_lidar(ranges)
+
         
         # TODO:
         #Find closest point to LiDAR
