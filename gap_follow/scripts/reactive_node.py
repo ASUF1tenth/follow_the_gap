@@ -83,6 +83,7 @@ class ReactiveFollowGap(Node):
             if i == 0:
                 last = proc_ranges[i]
                 continue
+                
             if (abs(proc_ranges[i] - last)) > self.disparity:
                  # Check if the edge is Left->Right , or Right->Left, it'll matter where we place the bubble.
                 if proc_ranges[i] < last:
@@ -109,12 +110,13 @@ class ReactiveFollowGap(Node):
         """
         ranges = data.ranges
         proc_ranges = self.preprocess_lidar(ranges)
+        proc_ranges = self.safety_bubble(proc_ranges)
 
         
         # TODO:
         #Find closest point to LiDAR
 
-        #Eliminate all points inside 'bubble' (set them to zero) 
+        #Eliminate all points inside 'bubble' (set them to zero), Done
 
         #Find max length gap 
 
