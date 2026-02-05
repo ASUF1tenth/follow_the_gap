@@ -30,10 +30,10 @@ class ReactiveFollowGap(Node):
         self.radians_per_elem = 0.00436332312998582
         self.PREPROCESS_CONV_SIZE = 3
         self.MAX_LIDAR_DIST = 6
-        self.disparity = 1
+        self.disparity = 0.5
         self.minimum_distance = 0.2
         self.center_index = 540
-
+        self.printed = 0
 
         # TODO: Subscribe to LIDAR
         self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
@@ -54,8 +54,7 @@ class ReactiveFollowGap(Node):
         proc_ranges[np.isinf(proc_ranges)] = self.MAX_LIDAR_DIST
         proc_ranges[np.isnan(proc_ranges)] = self.MAX_LIDAR_DIST
         # # Apply moving average filter for smoothing (window size of 5)
-        window_size = 5
-        kernel = np.ones(window_size) / window_size
+        kernel = np.ones(self.PREPROCESS_CONV_SIZE) / self.PREPROCESS_CONV_SIZE
         proc_ranges = np.convolve(proc_ranges, kernel, mode='valid')
         # # Cap maximum distance
         proc_ranges = np.clip(proc_ranges, 0, self.MAX_LIDAR_DIST)
@@ -123,20 +122,24 @@ class ReactiveFollowGap(Node):
         
         # Clear previous markers (prevents "ghost" markers in RViz)
         clear_marker = Marker()
-        # clear_marker.action = Marker.DELETEALL
+        # 1. Properly clear old markers
+        clear_marker = Marker()
+        clear_marker.header.frame_id = self.frame_id # MUST MATCH
+        clear_marker.ns = "bubbles"
+        clear_marker.action = Marker.DELETEALL
         marker_array.markers.append(clear_marker)
-
+        half_width = (self.center_index) * self.radians_per_elem
         for i, (idx, dist) in enumerate(bubble_locations):
             marker = Marker()
-            marker.header.frame_id = "ego_racecar/laser"
+            marker.header.frame_id = self.frame_id # MUST MATCH
             marker.header.stamp = self.get_clock().now().to_msg()
             marker.ns = "bubbles"
             marker.id = i
-            marker.type = Marker.CYLINDER # Cylinder looks better for 2D safety zones
+            marker.type = Marker.CYLINDER
             marker.action = Marker.ADD
             
             # Math to place the marker in 3D space
-            angle = (idx - self.center_index) * self.radians_per_elem
+            angle = half_width - (idx * self.radians_per_elem)
             marker.pose.position.x = dist * math.cos(angle)
             marker.pose.position.y = dist * math.sin(angle)
             marker.pose.position.z = 0.0 # On the ground
@@ -152,7 +155,7 @@ class ReactiveFollowGap(Node):
             marker.color.b = 0.0
             marker.color.a = 0.4 # Transparency
             
-            marker.lifetime = rclpy.duration.Duration(seconds=0.1).to_msg()
+            marker.lifetime = rclpy.duration.Duration(seconds=0, nanoseconds=100000000).to_msg()
             marker_array.markers.append(marker)
 
         self.marker_pub.publish(marker_array)
@@ -161,8 +164,16 @@ class ReactiveFollowGap(Node):
         """ Process each LiDAR scan as per the Follow Gap algorithm & publish an AckermannDriveStamped Message
         """
         ranges = data.ranges
+        self.frame_id = data.header.frame_id
         proc_ranges = self.preprocess_lidar(ranges)
-        proc_ranges = self.safety_bubble(proc_ranges)
+        pro_proc_ranges = self.safety_bubble(proc_ranges)
+
+        if self.printed == 0 :
+            self.get_logger().info(f"{ranges}")
+            self.get_logger().info(f"{proc_ranges}")
+            self.get_logger().info(f"{pro_proc_ranges}")
+            self.printed = 1
+
 
         
         # TODO:
