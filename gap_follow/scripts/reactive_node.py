@@ -34,7 +34,9 @@ class ReactiveFollowGap(Node):
         self.minimum_distance = 0.005
         self.center_index = 360
         self.printed = 0
+        self.iscornering = 0
         self.steering_Kp = 1.0
+        self.last_steering_angle = 0.0
 
         # TODO: Subscribe to LIDAR
         self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
@@ -65,12 +67,22 @@ class ReactiveFollowGap(Node):
         self.center_index = len(proc_ranges) // 2
         # Lidar Right to left, Print Left to right
         return proc_ranges[::-1]
+    
+    def cornering_check(self,ranges):
+        ranges = np.array(ranges)
+        right_side = ranges[:self.range_offset]
+        left_side = ranges[-self.range_offset:]
+        corner_threshold = 0.45
+        if np.any(right_side < corner_threshold) or np.any(left_side < corner_threshold):
+            self.iscornering = 1
+            self.get_logger().info("Cornering")
+        else:
+            self.iscornering = 0
+        return None 
 
     def find_best_gap(self, ranges) -> tuple :
         """ Return the start index & end index of the best gap in ranges
         """
-        # threshold for gap distance = self.gap_distance
-        # threshold for gap size >= self.safety_margin
 
         best_global_index = None
         best_score = -np.inf
@@ -255,10 +267,13 @@ class ReactiveFollowGap(Node):
         # In ROS, Right is NEGATIVE.
 
         # If the car turns too slow, increase Kp to 1.2 , If the car wobbles, decrease to 0.8.
-
+        
         angle_error = (self.center_index - best_idx) * self.radians_per_elem
-
-        steering_angle = angle_error * self.steering_Kp
+        
+        if self.iscornering == 0:
+            steering_angle = angle_error * self.steering_Kp
+        else:
+            steering_angle = 0
         
         # Clamp to physical limits (~24 degrees)
         return np.clip(steering_angle, -0.4189, 0.4189)
@@ -275,8 +290,16 @@ class ReactiveFollowGap(Node):
 
     def publish_drive(self,steering_angle,velocity):
         drive_msg = AckermannDriveStamped()
-        drive_msg.drive.steering_angle = steering_angle
+        if abs(self.last_steering_angle - steering_angle) > np.radians(10):
+            if self.last_steering_angle > steering_angle:
+                steering_msg = self.last_steering_angle - 0.1 * steering_angle
+            else:
+                steering_msg = self.last_steering_angle + 0.1 * steering_angle
+        else:
+            steering_msg = steering_angle   
+        drive_msg.drive.steering_angle = steering_msg
         drive_msg.drive.speed = velocity
+        self.last_steering_angle = steering_angle
         self.drive_pub.publish(drive_msg)
 
     def lidar_callback(self, data):
@@ -286,6 +309,9 @@ class ReactiveFollowGap(Node):
         self.frame_id = data.header.frame_id
         #Process LiDAR data, returned array is from Left to Right of the car
         proc_ranges = self.preprocess_lidar(ranges)
+
+        #Check for cornering (Car not done with corner yet)
+        self.cornering_check(ranges)
 
         #Implement a Safety bubble across disparities
         pro_proc_ranges = self.safety_bubble(proc_ranges)
