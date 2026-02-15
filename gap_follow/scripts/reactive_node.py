@@ -51,7 +51,6 @@ class ReactiveFollowGap(Node):
             1.Setting each value to the mean over some window
             2.Rejecting high values (eg. > 3m)
         """
-        
 
         # # Extract front 180° FOV: combine front-right (270-360°) and front-left (0-90°)
         proc_ranges = np.array(ranges[self.range_offset:-self.range_offset])
@@ -78,7 +77,7 @@ class ReactiveFollowGap(Node):
             self.get_logger().info("Cornering")
         else:
             self.iscornering = 0
-        return None 
+        return None
 
     def find_best_gap(self, ranges) -> tuple :
         """ Return the start index & end index of the best gap in ranges
@@ -274,19 +273,16 @@ class ReactiveFollowGap(Node):
             steering_angle = angle_error * self.steering_Kp
         else:
             steering_angle = 0
-        
+
         # Clamp to physical limits (~24 degrees)
         return np.clip(steering_angle, -0.4189, 0.4189)
 
     def get_velocity(self, steering_angle):
         abs_angle = abs(steering_angle)
         
-        if abs_angle < math.radians(10): # Straightaway
-            return 4.0 # High speed (m/s)
-        elif abs_angle < math.radians(35): # Moderate turn
-            return 2.0
-        else: # Sharp turn
-            return 1.0
+        v = 154.2982* math.exp(1.3078*abs_angle) - 150.2948 * math.exp(1.3526*abs_angle)
+
+        return v
 
     def publish_drive(self,steering_angle,velocity):
         drive_msg = AckermannDriveStamped()
@@ -327,6 +323,7 @@ class ReactiveFollowGap(Node):
 
         #Publish a drive message for the car
         self.publish_drive(steering_angle,target_velocity)
+
         # For inspecting the arrays and functions outputs
         if self.printed == 0 :
             self.get_logger().info(f"{ranges}")
