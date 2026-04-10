@@ -1,0 +1,20 @@
+gap_follower:
+  ros__parameters:
+    lidar_topic: /scan
+    drive_topic: /drive
+
+    # Core Follow-the-Gap tuning
+    max_lidar_dist: 10.0
+    preprocess_window: 3
+    disparity_threshold: 0.4
+    safety_radius_m: 0.28
+    gap_min_range_m: 1.2
+
+    # Vehicle limits and speed policy
+    max_steering_angle: 0.4189
+    speed_straight: 4.5
+    speed_corner: 2.5
+    corner_angle_threshold: 0.22
+
+    # Front field-of-view used by controller (90 deg each side)
+    fov_half_angle_rad: 1.57
