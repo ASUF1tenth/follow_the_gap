@@ -6,7 +6,7 @@ class SimpleDriveNode(Node):
     def __init__(self):
         super().__init__('simple_drive_node')
         
-        self.throttle = 0.05  # (-1.0 to 1.0)
+        self.throttle = 0.1  # (-1.0 to 1.0)
         self.steering = 60.0  # (degrees)
         
         # Publishers (QoS 10)
