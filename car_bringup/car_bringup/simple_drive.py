@@ -1,6 +1,7 @@
 import time
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import Float32
 from rclpy.qos import qos_profile_sensor_data
 
@@ -41,19 +42,18 @@ def main(args=None):
     
     try:
         rclpy.spin(simple_drive_node)
-    except KeyboardInterrupt:
-        # added logss
-        simple_drive_node.get_logger().info("KBINT received, STOPPING XX")
+    except (KeyboardInterrupt, ExternalShutdownException):
+        simple_drive_node.get_logger().info("Keyboard Interrupt received, stopping...")
     finally:
-        # Publish 0 throttle to stop the car before shutting down
+        # Publish stop message
         stop_msg = Float32()
         stop_msg.data = 0.0
         simple_drive_node.throttle_pub.publish(stop_msg)
         
-        # delya time to physically transmit the message
-        # befroe destroying the publisher
+        # small sleep so the middleware actually flushes
         time.sleep(0.5)
         
+        # cleanup
         simple_drive_node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
