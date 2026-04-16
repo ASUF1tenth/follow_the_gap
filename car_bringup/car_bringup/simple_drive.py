@@ -1,3 +1,4 @@
+import time
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32
@@ -40,12 +41,17 @@ def main(args=None):
     try:
         rclpy.spin(simple_drive_node)
     except KeyboardInterrupt:
-        pass
+        # added logss
+        simple_drive_node.get_logger().info("KBINT received, STOPPING XX")
     finally:
         # Publish 0 throttle to stop the car before shutting down
         stop_msg = Float32()
         stop_msg.data = 0.0
         simple_drive_node.throttle_pub.publish(stop_msg)
+        
+        # delya time to physically transmit the message
+        # befroe destroying the publisher
+        time.sleep(0.5)
         
         simple_drive_node.destroy_node()
         if rclpy.ok():
