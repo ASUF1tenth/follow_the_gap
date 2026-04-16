@@ -2,6 +2,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32
+from rclpy.qos import qos_profile_sensor_data
 
 class SimpleDriveNode(Node):
     def __init__(self):
@@ -10,12 +11,12 @@ class SimpleDriveNode(Node):
         self.throttle = 0.1  # (-1.0 to 1.0)
         self.steering = 60.0  # (degrees)
         
-        # Publishers (QoS 10)
-        self.throttle_pub = self.create_publisher(Float32, '/throttle', 10) 
-        self.steering_pub = self.create_publisher(Float32, '/steering_command', 10) 
+        # Publishers (Best Effort, badal last 10)
+        self.throttle_pub = self.create_publisher(Float32, '/throttle', qos_profile_sensor_data) 
+        self.steering_pub = self.create_publisher(Float32, '/steering_command', qos_profile_sensor_data) 
         
-        # Timer to publish commands at 20Hz
-        timer_period = 0.05  # seconds
+        # Timer to publish commands at 50Hz (0.02s) ((badal 20Hz))
+        timer_period = 0.02  # seconds 
         self.timer = self.create_timer(timer_period, self.timer_callback)
         
         self.get_logger().info(f'Simple Drive Node started. Publishing {self.throttle} throttle and {self.steering} steering.')
