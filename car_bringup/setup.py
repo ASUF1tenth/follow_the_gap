@@ -20,5 +20,9 @@ setup(
     description="Stack master launch package for controller plug-and-play",
     license="MIT",
     tests_require=["pytest"],
-    entry_points={"console_scripts": []},
+    entry_points={
+        "console_scripts": [
+            "simple_drive = car_bringup.simple_drive:main",
+        ]
+    },
 )
