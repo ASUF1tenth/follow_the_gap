@@ -1,0 +1,43 @@
+gap_follower:
+  ros__parameters:
+
+    # Topics
+    # lidar_topic: /scan
+    # drive_topic: /drive
+    lidar_topic: /autodrive/roboracer_1/lidar
+    drive_topic: /autodrive/roboracer/ackermann_drive
+
+    publish_autodrive_commands: true
+    throttle_topic: /autodrive/roboracer_1/throttle_command
+    steering_topic: /autodrive/roboracer_1/steering_command
+    speed_to_throttle_gain: 0.05
+
+    # Core Follow-the-Gap tuning
+    max_lidar_dist: 10.0
+    preprocess_window: 5
+    disparity_threshold: 0.4
+    safety_radius_m: 0.25
+    gap_min_range_m: 0.45
+    best_point_margin_m: 0.25
+    best_point_center_penalty: 0.004
+
+    # Vehicle limits and speed policy
+    max_steering_angle: 0.4189
+    speed_straight: 2.0
+    speed_corner: 0.5
+    speed_emergency: 0.6
+    no_gap_speed: 1.0
+    corner_angle_threshold: 0.20
+    caution_distance_m: 0.55
+    emergency_distance_m: 0.30
+    steering_smoothing_alpha: 0.35
+    max_steering_rate_rad_s: 3.2
+
+    # Front field-of-view (90° each side)
+    fov_half_angle_rad: 1.57
+
+    # Verbose telemetry logging
+    enable_file_logging: true
+    log_dir: logs
+    console_status_every_n: 20
+    near_collision_distance_m: 0.40
