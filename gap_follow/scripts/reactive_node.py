@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 import os
 import numpy as np
-from std_msgs import msg/Float32
+from std_msgs.msg import Float32
 from sensor_msgs.msg import LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
 from visualization_msgs.msg import Marker, MarkerArray
@@ -41,9 +41,10 @@ class ReactiveFollowGap(Node):
         self.steering_Kp = 1.0
         self.last_steering_angle = 0.0
 
-        # TODO: Subscribe to LIDAR
+        # Subscribe to LIDAR
         self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
-        # TODO: Publish to drive
+
+        # Publish to drive
         self.marker_pub = self.create_publisher(MarkerArray, 'safety_bubbles_markers', 10)
         self.gap_pub = self.create_publisher(MarkerArray, 'gap_marker', 10)
         self.drive_pub = self.create_publisher(AckermannDriveStamped,drive_topic,10)
@@ -287,9 +288,7 @@ class ReactiveFollowGap(Node):
         
         v = 154.2982* math.exp(1.3078*abs_angle) - 150.2948 * math.exp(1.3526*abs_angle)
 
-                
-
-        return max(4.0,min(0.0,velocity))
+        return max(4.0,min(0.0,v))
 
     def publish_drive(self,steering_angle,velocity):
         drive_msg = AckermannDriveStamped()
@@ -305,8 +304,8 @@ class ReactiveFollowGap(Node):
         car_drive_msg = (velocity - 0.0)/(4.0 - 0.0)
         self.last_steering_angle = steering_angle
         self.drive_pub.publish(drive_msg)
-        self.car_drive_pub(car_drive_msg)
-        self.car_steering_pub(steering_angle)
+        self.car_drive_pub.publish(Float32(data=car_drive_msg))
+        self.car_steering_pub.publish(Float32(data=steering_angle))
 
     def lidar_callback(self, data):
         """ Process each LiDAR scan as per the Follow Gap algorithm & publish an AckermannDriveStamped Message
